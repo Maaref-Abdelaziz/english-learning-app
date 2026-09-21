@@ -50,7 +50,10 @@ if not st.session_state.authenticated:
         else:
             st.error("❌ Incorrect access code.")
 
-    st.stop()
+       st.stop()
+
+# 👋 Welcome Student
+st.success(f"👋 Welcome, {st.session_state.student_name}!")
 
 # -----------------------------
 # Session state
