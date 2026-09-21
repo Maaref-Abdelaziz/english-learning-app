@@ -15,6 +15,35 @@ st.set_page_config(
     page_icon="🇬🇧",
     layout="wide",
 )
+# =========================
+# 🔐 Access Code
+# =========================
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+access_code = st.secrets.get("ACCESS_CODE", "")
+
+if not access_code:
+    st.error("⚠️ Access code is not configured.")
+    st.stop()
+
+if not st.session_state.authenticated:
+    st.title("🔐 English Learning Platform")
+    st.write("Please enter your access code to continue.")
+
+    entered_code = st.text_input(
+        "Access Code",
+        type="password"
+    )
+
+    if st.button("Login"):
+        if entered_code.strip() == access_code:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("❌ Incorrect access code.")
+
+    st.stop()
 
 # -----------------------------
 # Session state
