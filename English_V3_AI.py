@@ -15,21 +15,25 @@ st.set_page_config(
     page_icon="🇬🇧",
     layout="wide",
 )
-# =========================
-# 🔐 Access Code
-# =========================
+
+# ============================================================
+# Student Access Code
+# ============================================================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-access_code = st.secrets.get("ACCESS_CODE", "")
+if "student_name" not in st.session_state:
+    st.session_state.student_name = ""
 
-if not access_code:
-    st.error("⚠️ Access code is not configured.")
+students = st.secrets.get("STUDENTS", {})
+
+if not students:
+    st.error("⚠️ Student access codes are not configured.")
     st.stop()
 
 if not st.session_state.authenticated:
     st.title("🔐 English Learning Platform")
-    st.write("Please enter your access code to continue.")
+    st.write("Please enter your personal access code to continue.")
 
     entered_code = st.text_input(
         "Access Code",
@@ -37,8 +41,11 @@ if not st.session_state.authenticated:
     )
 
     if st.button("Login"):
-        if entered_code.strip() == access_code:
+        student_name = students.get(entered_code.strip().upper())
+
+        if student_name:
             st.session_state.authenticated = True
+            st.session_state.student_name = student_name
             st.rerun()
         else:
             st.error("❌ Incorrect access code.")
@@ -55,7 +62,6 @@ defaults = {
     "quiz_scores": {},
     "streak": 1,
     "ai_messages": [],
-    "ai_errors": [],
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -159,7 +165,7 @@ QUIZZES = {
 def get_ai_client():
     if OpenAI is None:
         return None
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
@@ -170,56 +176,21 @@ def ask_ai(message, level, history):
         return None, "لم يتم إعداد OPENAI_API_KEY أو مكتبة openai بعد."
 
     system_prompt = f"""
-You are a patient English teacher inside an educational app.
+You are an English teacher inside an educational app.
 Student level: {level}.
 
-For every student message:
-1. Check whether the English is correct.
-2. If there is a mistake, identify the important mistake(s).
-3. Give the corrected sentence.
-4. Explain the reason simply in Arabic.
-5. Give the Arabic meaning when useful.
-6. Give one short example.
-7. End with a simple practice prompt appropriate for the student's level.
-
-When there is a mistake, use:
-❌ Your sentence:
-[student sentence]
-
-✅ Correct:
-[correct sentence]
-
-📌 Explanation:
-[short Arabic explanation]
-
-🇸🇦 Meaning:
-[Arabic meaning]
-
-💡 Example:
-[one simple English example]
-
-🎯 Try:
-[a short practice prompt]
-
-If the sentence is correct, use:
-✅ Correct!
-[short encouragement]
-
-📌 Note:
-[one useful learning note]
-
-🎯 Try:
-[a short follow-up question]
-
-Important:
-- Do not invent mistakes.
-- Keep explanations short and suitable for the student's level.
-- Pay special attention to grammar, word choice, spelling, capitalization,
-  articles, subject-verb agreement, and verb tenses.
-- Encourage the student to practice English.
+Rules:
+- Encourage the student to communicate in English.
+- Use vocabulary and grammar appropriate for the student's level.
+- If the student makes important English mistakes, correct them briefly.
+- Explain corrections in Arabic when useful.
+- Ask a natural follow-up question to keep the conversation going.
+- Do not overwhelm an A1/A2 student with advanced grammar.
+- Be friendly, concise, and educational.
 """
+
     messages = [{"role": "system", "content": system_prompt}]
-    messages.extend(history[-12:])
+    messages.extend(history[-10:])
     messages.append({"role": "user", "content": message})
 
     try:
@@ -230,7 +201,6 @@ Important:
         return response.output_text, None
     except Exception as e:
         return None, f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}"
-
 
 # -----------------------------
 # Helpers
@@ -256,6 +226,7 @@ st.caption("منصة تفاعلية لتعلم الإنجليزية خطوة ب�
 
 # Sidebar
 st.sidebar.title("📚 Menu")
+st.sidebar.success(f"👤 Student: {st.session_state.student_name}")
 choice = st.sidebar.radio(
     "اختر القسم:",
     [
@@ -435,7 +406,7 @@ elif choice == "💬 Conversation":
             "ثبت مكتبة OpenAI أولاً باستخدام: pip install openai"
         )
 
-    if not os.getenv("OPENAI_API_KEY"):
+    if not st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY")):
         st.info(
             "أضف مفتاح OpenAI في متغير البيئة OPENAI_API_KEY قبل تشغيل المحادثة."
         )
@@ -480,12 +451,6 @@ elif choice == "💬 Conversation":
                     "role": "assistant",
                     "content": answer,
                 })
-
-                if "❌ Your sentence:" in answer and "✅ Correct:" in answer:
-                    st.session_state.ai_errors.append(
-                        user_message.strip().replace("\n", " ")[:180]
-                    )
-
                 add_points(2)
 
     if st.button("🗑️ Clear conversation"):
@@ -514,15 +479,6 @@ elif choice == "📊 My Progress":
             st.write(f"**{level}:** {score}/{len(QUIZZES[level])}")
     else:
         st.info("لم تكمل أي اختبار بعد.")
-
-    st.divider()
-    st.subheader("🧠 AI Learning Notes")
-    if st.session_state.ai_errors:
-        st.write("أمثلة من الأخطاء التي سجلتها أثناء التدريب:")
-        for item in st.session_state.ai_errors[-10:]:
-            st.write(f"• {item}")
-    else:
-        st.info("لا توجد أخطاء مسجلة بعد. ابدأ محادثة مع AI Tutor.")
 
     st.divider()
     st.subheader("🏆 Achievements")
