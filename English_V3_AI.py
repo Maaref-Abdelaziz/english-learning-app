@@ -16,9 +16,9 @@ st.set_page_config(
     layout="wide",
 )
 
-# ============================================================
+# ===========================================================
 # Student Access Code
-# ============================================================
+# ===========================================================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -30,6 +30,30 @@ students = st.secrets.get("STUDENTS", {})
 if not students:
     st.error("⚠️ Student access codes are not configured.")
     st.stop()
+
+if not st.session_state.authenticated:
+    st.title("🔐 English Learning Platform")
+    st.write("Please enter your personal access code to continue.")
+
+    entered_code = st.text_input(
+        "Access Code",
+        type="password"
+    )
+
+    if st.button("Login"):
+        student_name = students.get(entered_code.strip().upper())
+
+        if student_name:
+            st.session_state.authenticated = True
+            st.session_state.student_name = student_name
+            st.rerun()
+        else:
+            st.error("❌ Incorrect access code.")
+
+    st.stop()
+
+# 👋 Welcome Student
+st.success(f"👋 Welcome, {st.session_state.student_name}!")
 
 if not st.session_state.authenticated:
     st.title("🔐 English Learning Platform")
