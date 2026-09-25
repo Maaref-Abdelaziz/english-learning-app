@@ -55,10 +55,18 @@ if not st.session_state.authenticated:
             entered_code.strip().upper()
         )
 
-        if student_name:
-            st.session_state.authenticated = True
-            st.session_state.student_name = student_name
-            st.rerun()
+       if student_name:
+    try:
+        supabase.table("login_history").insert({
+            "student_name": student_name
+        }).execute()
+
+        st.session_state.authenticated = True
+        st.session_state.student_name = student_name
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"❌ Failed to record login: {e}")
 
         else:
             st.error("❌ Incorrect access code.")
