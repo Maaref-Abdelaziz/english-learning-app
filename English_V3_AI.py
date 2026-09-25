@@ -1,6 +1,10 @@
 import streamlit as st
 import os
-
+from supabase import create_client
+supabase = create_client(
+    st.secrets["SUPABASE_URL"],
+    st.secrets["SUPABASE_KEY"]
+)
 try:
     from openai import OpenAI
 except ImportError:
