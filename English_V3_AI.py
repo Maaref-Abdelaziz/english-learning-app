@@ -39,9 +39,7 @@ if not students:
     st.stop()
 
 if not st.session_state.authenticated:
-
     st.title("🔐 English Learning Platform")
-
     st.write("Please enter your personal access code to continue.")
 
     entered_code = st.text_input(
@@ -50,23 +48,20 @@ if not st.session_state.authenticated:
     )
 
     if st.button("Login"):
+        student_name = students.get(entered_code.strip().upper())
 
-        student_name = students.get(
-            entered_code.strip().upper()
-        )
+        if student_name:
+            try:
+                supabase.table("login_history").insert({
+                    "student_name": student_name
+                }).execute()
 
-       if student_name:
-    try:
-        supabase.table("login_history").insert({
-            "student_name": student_name
-        }).execute()
+                st.session_state.authenticated = True
+                st.session_state.student_name = student_name
+                st.rerun()
 
-        st.session_state.authenticated = True
-        st.session_state.student_name = student_name
-        st.rerun()
-
-    except Exception as e:
-        st.error(f"❌ Failed to record login: {e}")
+            except Exception as e:
+                st.error(f"❌ Failed to record login: {e}")
 
         else:
             st.error("❌ Incorrect access code.")
